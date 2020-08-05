@@ -1,0 +1,254 @@
+/*********************************************************************
+*                SEGGER Microcontroller GmbH & Co. KG                *
+*        Solutions for real time microcontroller applications        *
+**********************************************************************
+*                                                                    *
+*        (c) 1996 - 2012  SEGGER Microcontroller GmbH & Co. KG       *
+*                                                                    *
+*        Internet: www.segger.com    Support:  support@segger.com    *
+*                                                                    *
+**********************************************************************
+** emWin V5.14 - Graphical user interface for embedded applications **
+All  Intellectual Property rights  in the Software belongs to  SEGGER.
+emWin is protected by  international copyright laws.  Knowledge of the
+source code may not be used to write a similar product.  This file may
+only be used in accordance with the following terms:
+The software has been licensed to Energy Micro AS whose registered office
+is situated at  Sandakerveien 118, N-0484 Oslo, NORWAY solely
+for  the  purposes  of  creating  libraries  for Energy Micros ARM Cortex-M3, M4F
+processor-based  devices,  sublicensed  and distributed  under the terms and
+conditions  of  the   End  User  License Agreement supplied by Energy Micro AS. 
+Full source code is available at: www.segger.com
+We appreciate your understanding and fairness.
+----------------------------------------------------------------------
+File        : WIDGET_ListView.c
+Purpose     : Demonstrates the use of header widgets
+---------------------------END-OF-HEADER------------------------------
+*/
+
+#include <stddef.h>
+#include <string.h>
+#include "GUI.h"
+#include "LISTVIEW.h"
+#include "FRAMEWIN.h"
+#include "main.h"
+
+/*********************************************************************
+*
+*       Defines
+*
+**********************************************************************
+*/
+
+#define SPEED 650
+
+#define MSG_CHANGE_MAIN_TEXT (WM_USER + 0)
+#define MSG_CHANGE_INFO_TEXT (WM_USER + 1)
+
+/*********************************************************************
+*
+*       Static data
+*
+**********************************************************************
+*/
+
+static const GUI_COLOR Colors[]      = { 0, GUI_BLUE };
+
+static const GUI_LOGPALETTE Palette  = { 
+  2,     /* bps */
+  1,     /* transparency */
+  Colors /* pointer to colors */
+};
+
+extern GUI_CONST_STORAGE GUI_FONT GUI_FontVerdana23;
+
+extern uint32_t records,page_num;
+extern log_t Log_R[];
+
+//static const GUI_BITMAP bmBarCode = { 96, 10, 12, 1, acBarCode, &Palette};
+
+// char * _aTable_1[][5] = {
+// }
+
+static  char * _aTable_2[][3] = {
+  { "111111-1111111", "100-A", "Item AAA" },
+  { "222222-2222222", "100-B", "Item BBB" },
+  { "333333-3333333", "100-C", "Item CCC" },
+  { "444444-4444444", "100-D", "Item DDD" },
+  { "555555-5555555", "100-E", "Item EEE" },
+  { "666666-6666666", "100-F", "Item FFF" },
+  { "777777-7777777", "100-G", "Item GGG" },
+  { "888888-8888888", "100-H", "Item HHH" }
+};
+
+static LISTVIEW_Handle _hListView;
+
+static char _acMainText[100];
+static char _acInfoText[100];
+
+/*********************************************************************
+*
+*       Static code
+*
+**********************************************************************
+*/
+/*******************************************************************
+*
+*       _ChangeMainText
+*
+*  Sends a message to the background window and invalidate it, so
+*  the callback of the background window display the new text.
+*/
+
+
+/*******************************************************************
+*
+*       _cbBkWindow
+*/
+static void _cbBkWindow(WM_MESSAGE* pMsg) {
+  switch (pMsg->MsgId) {
+    case MSG_CHANGE_MAIN_TEXT:
+
+      break;
+    case MSG_CHANGE_INFO_TEXT:
+
+      break;
+    case WM_PAINT:
+      //GUI_SetBkColor(GUI_BLACK);
+      GUI_Clear();
+      //GUI_SetColor(GUI_WHITE);
+      LISTVIEW_SetDefaultFont(&GUI_FontVerdana23);
+    //  LISTVIEW_SetBkColor(_hListView,LISTVIEW_CI_UNSEL,GUI_BLACK);
+    //  LISTVIEW_SetDefaultTextColor(0,GUI_WHITE);
+      break;
+       case WM_CREATE:
+          LISTVIEW_SetFont(_hListView,&GUI_FontVerdana23);
+  LISTVIEW_SetBkColor(_hListView,LISTVIEW_CI_UNSEL,GUI_BLACK);
+  LISTVIEW_SetDefaultTextColor(0,GUI_WHITE); 
+         break;
+    default:
+      WM_DefaultProc(pMsg);
+  }
+}
+void Show_Rows(uint8_t n_rows)
+{
+    LISTVIEW_DeleteAllRows(_hListView);
+    GUI_Exec();
+     char item1[20], item2[20],item3[20],item4[20],item5[20];
+     for (int i = 0; i < n_rows; i++) {
+     GUI_ConstString _aTable_1[] = {item1,item2,item3, item4,item5 };
+    struct tm *out = localtime(&Log_R[i].start_calib);
+    sprintf(item1,"%02d.%02d.%02d %02d:%02d:%02d", out->tm_mday, out->tm_mon+1, out->tm_year-100, out->tm_hour, out->tm_min, out->tm_sec);
+    out = localtime(&Log_R[i].stop_calib);
+    sprintf(item2,"%02d.%02d.%02d %02d:%02d:%02d", out->tm_mday, out->tm_mon+1, out->tm_year-100, out->tm_hour, out->tm_min, out->tm_sec);
+     out = localtime(&Log_R[i].gps_time);
+    sprintf(item3,"%02d.%02d.%02d %02d:%02d:%02d", out->tm_mday, out->tm_mon+1, out->tm_year-100, out->tm_hour, out->tm_min, out->tm_sec);   
+    sprintf(item4,"%d", Log_R[i].delta_ms);
+    sprintf(item5,"%d", Log_R[i].T_new);
+    LISTVIEW_AddRow(_hListView, _aTable_1);
+    }
+    GUI_Exec(); 
+}
+void Show_Page(uint16_t page)
+{
+
+  if (page!=page_num-1)
+  {
+    Read_Log(page,19);
+    Show_Rows(19);
+  }
+  else  // вывод последней страницы (возможно неполной)
+  {
+    uint8_t num = records-(page_num-1)*19;
+    Read_Log(page,num);
+    Show_Rows(num);
+  }
+  
+}
+/*********************************************************************
+*
+*       _Demo
+*/
+static void _Demo(void) {
+  unsigned int i, j;
+  int Key = 0;
+  int Cnt = 15;
+WM_SetFocus(_hListView);
+  //char acInfoText[] = "-- sec to play with header control";
+  HEADER_Handle hHeader;
+  hHeader = LISTVIEW_GetHeader(_hListView);
+  HEADER_SetFont(hHeader,&GUI_FontVerdana23);
+  
+  //_ChangeInfoText("LISTVIEW_AddColumn");
+  LISTVIEW_AddColumn(_hListView, 200, " Время нач. калибр. ",         GUI_TA_CENTER);
+ 
+  LISTVIEW_AddColumn(_hListView, 200, " Время кон. калибр. ", GUI_TA_CENTER);
+  
+  LISTVIEW_AddColumn(_hListView, 200, " GPS время ", GUI_TA_CENTER);
+  
+    LISTVIEW_AddColumn(_hListView, 0, " Дельта ", GUI_TA_CENTER);
+  
+    LISTVIEW_AddColumn(_hListView, 0, " Т новое ", GUI_TA_CENTER);
+  GUI_Exec();
+  
+
+  uint8_t curr_page=0;
+  Show_Page(curr_page);
+  while(1)
+  {
+    //
+    if (key1_press)
+    {
+      HAL_Delay(50);
+      if (key1_press) return;
+      
+    }
+    if (key2_press)
+    {
+      HAL_Delay(50);
+      if (key2_press) 
+      { 
+        curr_page++; if (curr_page>(page_num-1)) curr_page=0; 
+        Show_Page(curr_page);
+      }
+    }
+  }
+
+    
+}
+
+/*********************************************************************
+*
+*       _DemoListView
+*/
+static void _DemoListView(void) {
+
+  _hListView = LISTVIEW_Create(10, 10, 840, 470, 0, 1234, WM_CF_SHOW, 0);
+  GUI_Exec();
+  _Demo();
+  WM_DeleteWindow(_hListView);
+  GUI_Delay(SPEED);
+}
+
+/*********************************************************************
+*
+*       Public code
+*
+**********************************************************************
+*/
+/*********************************************************************
+*
+*       MainTask
+*/
+
+void MainTask(void) {
+
+  WM_EnableMemdev(WM_HBKWIN);
+  WM_SetCreateFlags(WM_CF_MEMDEV);
+  WM_SetCallback(WM_HBKWIN, _cbBkWindow);
+  _DemoListView();
+
+ // }
+}
+
+/*************************** End of file ****************************/
